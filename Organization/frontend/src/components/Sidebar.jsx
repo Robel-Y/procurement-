@@ -20,7 +20,7 @@ const Sidebar = ({ isMobileOpen, onLinkClick }) => {
           status: "submitted",
         });
         if (response.success) {
-          let pendingReqs = response.data || [];
+          let pendingReqs = response.data.data || [];
           if (user?.role === "approver") {
             pendingReqs = pendingReqs.filter(
               (req) => req.department === user.department
@@ -35,7 +35,7 @@ const Sidebar = ({ isMobileOpen, onLinkClick }) => {
         const response = await purchaseRequestService.getAll();
         if (response.success) {
           const myRequests =
-            response.data?.filter(
+            response.data.data?.filter(
               (req) =>
                 req.requestedBy?._id === user._id ||
                 req.requestedBy === user._id
