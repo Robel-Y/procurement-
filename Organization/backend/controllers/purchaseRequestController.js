@@ -3,6 +3,11 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const ErrorResponse = require("../utils/ErrorResponse");
 
+// Fixed approver ID and info
+const FIXED_APPROVER_ID = "690607665705c888367296d1"; // your fixed approver
+const FIXED_APPROVER_NAME = "Fixed Approver";
+const FIXED_APPROVER_EMAIL = "a@gmail.com";
+
 // @desc    Create purchase request
 // @route   POST /api/purchase-requests
 // @access  Private/Requester
@@ -44,31 +49,22 @@ exports.submitRequest = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Purchase request not found", 404));
   }
 
-  // Check ownership
   if (purchaseRequest.requestedBy.toString() !== req.user.id) {
     return next(
       new ErrorResponse("Not authorized to update this request", 403)
     );
   }
 
-  // Find an approver in the same department
-  const approver = await User.findOne({
-    role: "approver",
-    department: purchaseRequest.department,
-    isActive: true,
-  });
-
-  if (!approver) {
-    return next(
-      new ErrorResponse("No approver found for this department", 400)
-    );
-  }
-
+  // Assign the fixed approver
   purchaseRequest.status = "submitted";
-  purchaseRequest.currentApprover = approver._id;
+  purchaseRequest.currentApprover = FIXED_APPROVER_ID;
   await purchaseRequest.save();
 
-  await purchaseRequest.populate("currentApprover", "name email");
+  // Populate fixed approver and requester info for response
+  await purchaseRequest.populate([
+    { path: "currentApprover", select: "name email" },
+    { path: "requestedBy", select: "name email department" },
+  ]);
 
   res.json({
     success: true,
@@ -149,6 +145,7 @@ exports.getRequest = asyncHandler(async (req, res, next) => {
     data: request,
   });
 });
+
 // @desc    Approve/Reject purchase request
 // @route   PUT /api/purchase-requests/:id/approve
 // @access  Private/Approver
@@ -167,42 +164,46 @@ exports.approveRequest = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Purchase request not found", 404));
   }
 
-  // Fix: Better way to check currentApprover
+  // Check if current approver matches the fixed approver ID
   let currentApproverId;
 
-  // Check if currentApprover is populated (object) or just ID (string)
   if (purchaseRequest.currentApprover && purchaseRequest.currentApprover._id) {
-    // It's populated as an object
     currentApproverId = purchaseRequest.currentApprover._id.toString();
   } else {
-    // It's just the ID string
     currentApproverId = purchaseRequest.currentApprover
       ? purchaseRequest.currentApprover.toString()
       : null;
   }
 
-  // Debug logs (remove in production)
-  console.log("Current Approver ID:", currentApproverId);
-  console.log("User ID:", req.user.id);
-  console.log("Purchase Request:", purchaseRequest);
+  // Debug logs
+  console.log("Current Approver ID from DB:", currentApproverId);
+  console.log("Fixed Approver ID:", FIXED_APPROVER_ID);
+  console.log("Logged in User ID:", req.user.id);
 
-  if (!currentApproverId || currentApproverId !== req.user.id) {
+  // Check authorization - user must be the fixed approver
+  if (req.user.id !== FIXED_APPROVER_ID) {
     return next(
       new ErrorResponse("Not authorized to approve this request", 403)
     );
   }
 
-  // Check budget against approval limit
-  if (
-    status === "approved" &&
-    purchaseRequest.budget > req.user.approvalLimit
-  ) {
+  // Also verify the request is assigned to this approver
+  if (currentApproverId !== FIXED_APPROVER_ID) {
     return next(
-      new ErrorResponse(
-        `Approval limit exceeded. Your limit: ${req.user.approvalLimit}`,
-        400
-      )
+      new ErrorResponse("This request is not assigned to you for approval", 403)
     );
+  }
+
+  // Check budget against approval limit if applicable
+  if (status === "approved" && req.user.approvalLimit) {
+    if (purchaseRequest.budget > req.user.approvalLimit) {
+      return next(
+        new ErrorResponse(
+          `Approval limit exceeded. Your limit: ${req.user.approvalLimit}`,
+          400
+        )
+      );
+    }
   }
 
   purchaseRequest.status = status;
