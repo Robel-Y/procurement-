@@ -7,8 +7,15 @@ import { BrowserRouter } from 'react-router-dom';
 import RegistrationForm from './RegistrationForm.jsx';
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
+    <StrictMode>
+
     <SupplierLanding />
     {/* <RegistrationForm /> */}
-  </StrictMode>,
+
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+    </StrictMode>
+  </StrictMode>
 )
