@@ -1,0 +1,79 @@
+/* Sidebar container */
+.sidebar{
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 240px;
+  background-color:green;
+  color: #fff;
+
+  /* ✅ Remove space or gap */
+
+  margin: 30;
+  padding: 0; 
+
+  /* removes internal spacing around content */
+
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+
+/* When open */
+.sidebar.open {
+  transform: translateX(0);
+}
+
+/* When closed */
+.sidebar.closed {
+  transform: translateX(-100%);
+}
+
+.sidebar-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar-menu li {
+  margin: 15px 0;
+}
+
+.sidebar-menu a {
+  color: #ccc;
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: color 0.3s;
+}
+
+.sidebar-menu a:hover {
+  color: #fff;
+}
+
+/* Toggle button */
+.toggle-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background-color: transparent;
+  color: #000f;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  z-index: 1100;
+  transition: background 0.3s;
+}
+
+.toggle-btn:hover {
+  background-color: #2c2c44;
+}

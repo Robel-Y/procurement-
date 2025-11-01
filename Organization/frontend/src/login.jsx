@@ -1,5 +1,7 @@
+import React from "react";
 import "./login.css";
 import { useState } from "react";
+import Sidebar from "./side-bar";
 
 export default function Accumulator() {
   const [isLogedIn, setIsLogedIn] = useState(false);
@@ -10,6 +12,7 @@ export default function Accumulator() {
       <NavigationBar isLogedIn={isLogedIn} setLogin={setIsLogedIn} setCancel = {setCancel} cancel={cancel}/>
       <LoginForm isLogedIn={isLogedIn} cancel={cancel} setCancel={setCancel}/>
       <BodyDisplay isLogedIn={isLogedIn} />
+      <Sidebar />
     </>
   );
 }
@@ -92,6 +95,9 @@ export const LoginForm = ({ isLogedIn,cancel,setCancel }) => {
   return (
       isLogedIn && !cancel && (
               (
+       <div className="login-wrapper">
+           <Sidebar />
+
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
@@ -159,6 +165,7 @@ export const LoginForm = ({ isLogedIn,cancel,setCancel }) => {
             <button onClick={() => setCancel(true)}>Back</button>
           </section>
         </div>
+        </div>
       </div>
     )
   )
@@ -182,3 +189,5 @@ export function Footer() {
     </>
   );
 }
+
+

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import './dash-board.css';
+import Sidebar from './side-bar';
+
 
 export const ApproverDashboard = () => {
   const [activeTab, setActiveTab] = useState('pending');
