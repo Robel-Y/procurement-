@@ -1,17 +1,20 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { NavigationBar } from './login'
-import { BodyDisplay } from './login'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from "./login.jsx";
+import  {ApproverDashboard}  from './dash-board.jsx';
+
+
 import { Footer } from './login'
-import { RequesterDashboard } from './requester'
+import { LoginForm } from './login'
+import Accumulator from './login'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <NavigationBar />
-    {/* <NavigationBar /> */}
-    <BodyDisplay />
-<RequesterDashboard />
+{/* <Accumulator />
+ <Footer /> */}
 
-    <Footer />
+ <ApproverDashboard />
+
   </StrictMode>,
 )

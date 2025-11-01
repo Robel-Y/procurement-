@@ -1,14 +1,35 @@
 import "./login.css";
 import { useState } from "react";
 
+export default function Accumulator() {
+  const [isLogedIn, setIsLogedIn] = useState(false);
+   const [cancel, setCancel] = useState(false);
 
-export function NavigationBar() {
+  return (
+    <>
+      <NavigationBar isLogedIn={isLogedIn} setLogin={setIsLogedIn} setCancel = {setCancel} cancel={cancel}/>
+      <LoginForm isLogedIn={isLogedIn} cancel={cancel} setCancel={setCancel}/>
+      <BodyDisplay isLogedIn={isLogedIn} />
+    </>
+  );
+}
+
+export function NavigationBar({ setLogin, setCancel }) {
+
+  function resetStates(){
+    setLogin(true);
+    setCancel(false);
+  }
+
   return (
     <>
       <div className="body">
         <section className="nav-bar">
           <h1>
-            WELCOME TO THE PROCUREMENT <button className="login">login</button>
+            WELCOME TO THE PROCUREMENT{" "}
+            <button className="login" onClick={()=>resetStates()}>
+              login
+            </button>
           </h1>
         </section>
       </div>
@@ -27,97 +48,122 @@ export function BodyDisplay() {
           className="company-logo"
         />
         <h2>our objective</h2>
-        <p>The main objective of our computer organizations is to design, develop, and implement efficient and innovative technological solutions that enhance productivity, streamline operations, and support data-driven decision-making. These organizations strive to promote innovation in software, hardware, and networking systems while ensuring the security and integrity of data through effective information management and cybersecurity measures. They also aim to provide reliable technical support, continuous system improvement, and user training to enhance technological competence. Ultimately, computer organizations seek to contribute to sustainable technological advancement and digital transformation that benefits individuals, businesses, and society as a whole.</p>
+        <p>
+          The main objective of our computer organizations is to design,
+          develop, and implement efficient and innovative technological
+          solutions that enhance productivity, streamline operations, and
+          support data-driven decision-making. These organizations strive to
+          promote innovation in software, hardware, and networking systems while
+          ensuring the security and integrity of data through effective
+          information management and cybersecurity measures. They also aim to
+          provide reliable technical support, continuous system improvement, and
+          user training to enhance technological competence. Ultimately,
+          computer organizations seek to contribute to sustainable technological
+          advancement and digital transformation that benefits individuals,
+          businesses, and society as a whole.
+        </p>
       </div>
     </>
   );
 }
 
-
-export const LoginForm = () => {
+export const LoginForm = ({ isLogedIn,cancel,setCancel }) => {
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
+    email: "",
+    password: "",
+    rememberMe: false,
   });
-
+ 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     // Handle login logic here
-    console.log('Login attempt:', formData);
+    console.log("Login attempt:", formData);
     // Add your authentication logic
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h1>Welcome Back</h1>
-          <p>Please sign in to your account</p>
-        </div>
-
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              required
-            />
+      isLogedIn && !cancel && (
+              (
+      <div className="login-container">
+        <div className="login-card">
+          <div className="login-header">
+            <h1>Welcome Back</h1>
+            <p>Please sign in to your account</p>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-
-          <div className="form-options">
-            <label className="checkbox-label">
+          <form className="login-form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="email">Email Address</label>
               <input
-                type="checkbox"
-                name="rememberMe"
-                checked={formData.rememberMe}
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
                 onChange={handleChange}
+                placeholder="Enter your email"
+                required
               />
-              <span className="checkmark"></span>
-              Remember me
-            </label>
-            <a href="#forgot" className="forgot-link">Forgot password?</a>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+
+            <div className="form-options">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                />
+                <span className="checkmark"></span>
+                Remember me
+              </label>
+              <a href="#forgot" className="forgot-link">
+                Forgot password?
+              </a>
+            </div>
+
+            <button type="submit" className="login-button">
+              Sign In
+            </button>
+          </form>
+
+          <div className="login-footer">
+            <p>
+              Don't have an account?{" "}
+              <a href="#signup" className="signup-link">
+                Sign up
+              </a>
+            </p>
           </div>
-
-          <button type="submit" className="login-button">
-            Sign In
-          </button>
-        </form>
-
-        <div className="login-footer">
-          <p>Don't have an account? <a href="#signup" className="signup-link">Sign up</a></p>
+          <section>  
+            <button onClick={() => setCancel(true)}>Back</button>
+          </section>
         </div>
       </div>
-    </div>
+    )
+  )
   );
 };
-
 
 export function Footer() {
   return (
