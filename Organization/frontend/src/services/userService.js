@@ -64,4 +64,18 @@ export const userService = {
       };
     }
   },
+  // Add to src/services/userService.js
+  async createUser(userData) {
+    try {
+      const response = await api.post("/auth/register", userData);
+      return response; // return the full object with success, token, data
+    } catch (error) {
+      console.error("Error creating user:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+        errors: error.response?.data?.errors || null,
+      };
+    }
+  },
 };

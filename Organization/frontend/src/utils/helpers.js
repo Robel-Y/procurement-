@@ -54,6 +54,7 @@ export const getStatusDisplayText = (status) => {
   }
 };
 
+
 // Get user initials for avatar
 export const getInitials = (name) => {
   if (!name) return "US";
@@ -223,4 +224,6 @@ export const hasPermission = (user, requiredRole) => {
 // Generate unique ID
 export const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  // Add to src/utils/helpers.js
 };
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getInitials } from "../utils/helpers";
 
@@ -7,32 +7,54 @@ const Header = ({ onMenuToggle, isMobileOpen }) => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const notificationRef = useRef(null);
 
-  // Mock notifications data
+  // Mock notifications data - more realistic data
   const mockNotifications = [
     {
       id: 1,
       title: "New Purchase Request",
-      message: "New request from John Doe needs approval",
+      message: "John Doe submitted a new purchase request for office supplies",
       timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
       type: "approval",
       read: false,
+      priority: "high",
     },
     {
       id: 2,
       title: "Bid Submitted",
-      message: "Supplier TechCorp submitted a bid for PR-2024-001",
+      message: "TechCorp submitted a bid for your request PR-2024-001",
       timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
       type: "bid",
       read: false,
+      priority: "medium",
     },
     {
       id: 3,
       title: "Request Approved",
-      message: "Your purchase request PR-2024-002 has been approved",
+      message: "Your purchase request PR-2024-002 has been approved by Finance",
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
       type: "status",
       read: true,
+      priority: "low",
+    },
+    {
+      id: 4,
+      title: "Supplier Update",
+      message: "Office Solutions Ltd. updated their contact information",
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
+      type: "supplier",
+      read: false,
+      priority: "medium",
+    },
+    {
+      id: 5,
+      title: "Budget Alert",
+      message: "Your department has reached 80% of monthly budget",
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+      type: "alert",
+      read: true,
+      priority: "high",
     },
   ];
 
@@ -43,6 +65,23 @@ const Header = ({ onMenuToggle, isMobileOpen }) => {
       (notification) => !notification.read
     ).length;
     setUnreadCount(unread);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const markAsRead = (id) => {
@@ -82,9 +121,30 @@ const Header = ({ onMenuToggle, isMobileOpen }) => {
         return "💰";
       case "status":
         return "📋";
+      case "supplier":
+        return "🏢";
+      case "alert":
+        return "⚠️";
       default:
         return "🔔";
     }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "high":
+        return "#ef4444";
+      case "medium":
+        return "#f59e0b";
+      case "low":
+        return "#10b981";
+      default:
+        return "#6b7280";
+    }
+  };
+
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
   };
 
   return (
@@ -106,10 +166,10 @@ const Header = ({ onMenuToggle, isMobileOpen }) => {
 
         <div className="user-menu">
           {/* Notification Bell */}
-          <div className="notification-container">
+          <div className="notification-container" ref={notificationRef}>
             <button
               className="notification-btn"
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={toggleNotifications}
               aria-label="Notifications"
             >
               <span className="notification-icon">🔔</span>
@@ -120,56 +180,85 @@ const Header = ({ onMenuToggle, isMobileOpen }) => {
 
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="notification-dropdown">
-                <div className="notification-header">
-                  <h4>Notifications</h4>
-                  {unreadCount > 0 && (
-                    <button
-                      className="btn btn-link btn-sm"
-                      onClick={markAllAsRead}
-                    >
-                      Mark all as read
-                    </button>
-                  )}
-                </div>
+              <>
+                <div
+                  className="notification-backdrop"
+                  onClick={() => setShowNotifications(false)}
+                />
+                <div className="notification-dropdown">
+                  <div className="notification-header">
+                    <h4>Notifications</h4>
+                    <div className="d-flex align-center gap-2">
+                      {unreadCount > 0 && (
+                        <button
+                          className="btn btn-link btn-sm"
+                          onClick={markAllAsRead}
+                          style={{ fontSize: "0.75rem" }}
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                      <span className="notification-count">
+                        {unreadCount} unread
+                      </span>
+                    </div>
+                  </div>
 
-                <div className="notification-list">
-                  {notifications.length > 0 ? (
-                    notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={`notification-item ${
-                          notification.read ? "read" : "unread"
-                        }`}
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        <div className="notification-icon">
-                          {getNotificationIcon(notification.type)}
+                  <div className="notification-list">
+                    {notifications.length > 0 ? (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`notification-item ${
+                            notification.read ? "read" : "unread"
+                          }`}
+                          onClick={() => markAsRead(notification.id)}
+                        >
+                          <div className="notification-icon">
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                          <div className="notification-content">
+                            <div className="d-flex align-center gap-2">
+                              <div className="notification-title">
+                                {notification.title}
+                              </div>
+                              <div
+                                style={{
+                                  width: "6px",
+                                  height: "6px",
+                                  borderRadius: "50%",
+                                  backgroundColor: getPriorityColor(
+                                    notification.priority
+                                  ),
+                                }}
+                              />
+                            </div>
+                            <div className="notification-message">
+                              {notification.message}
+                            </div>
+                            <div className="notification-time">
+                              {formatTime(notification.timestamp)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="notification-content">
-                          <div className="notification-title">
-                            {notification.title}
-                          </div>
-                          <div className="notification-message">
-                            {notification.message}
-                          </div>
-                          <div className="notification-time">
-                            {formatTime(notification.timestamp)}
-                          </div>
+                      ))
+                    ) : (
+                      <div className="notification-empty">
+                        <div style={{ fontSize: "2rem", marginBottom: "8px" }}>
+                          🔔
                         </div>
+                        No notifications
                       </div>
-                    ))
-                  ) : (
-                    <div className="notification-empty">No notifications</div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <div className="notification-footer">
-                  <a href="/notifications" className="btn btn-outline btn-sm">
-                    View All Notifications
-                  </a>
+                  <div className="notification-footer">
+                    <a href="/notifications" className="btn btn-outline btn-sm">
+                      View All Notifications
+                    </a>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
