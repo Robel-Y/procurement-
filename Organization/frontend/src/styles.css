@@ -913,3 +913,36 @@ textarea.form-control {
   color: #2563eb;
   border: 1px solid #93c5fd;
 }
+
+
+/* Leaflet Map Styles */
+.leaflet-container {
+  background: var(--card-bg);
+  font-family: inherit;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+}
+
+.leaflet-popup-tip {
+  background: var(--card-bg);
+}
+
+/* Supplier list styles */
+.supplier-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.supplier-item:hover {
+  background: var(--hover);
+  cursor: pointer;
+}

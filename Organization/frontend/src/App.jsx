@@ -16,6 +16,7 @@ import "./styles.css";
 import NotFound from "./pages/NotFound";
 import BidManagement from "./pages/BidManagement";
 import SupplierBids from "./pages/SupplierBids";
+import SupplierMapPage from "./pages/SupplierMapPage"; // Add this import
 
 const Layout = ({ children }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -105,6 +106,17 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Add Supplier Map Route - Place it here */}
+          <Route
+            path="/supplier-map"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SupplierMapPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/bid-management"
             element={
@@ -135,7 +147,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* Add a catch-all route for 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>

@@ -7,6 +7,7 @@ const Sidebar = ({ isMobileOpen, onLinkClick }) => {
   const { user } = useAuth();
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [myPendingRequests, setMyPendingRequests] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(3); // Mock data
 
   useEffect(() => {
     fetchSidebarData();
@@ -71,18 +72,32 @@ const Sidebar = ({ isMobileOpen, onLinkClick }) => {
           path: "/create-purchase-request",
           label: "Create Request",
           icon: "➕",
+        },
+        {
+          path: "/notifications",
+          label: "Notifications",
+          icon: "🔔",
+          badge: unreadNotifications,
         }
       );
     }
 
     // Minimal menu for approver
     if (user?.role === "approver") {
-      items.push({
-        path: "/approvals",
-        label: "Approvals",
-        icon: "✅",
-        badge: pendingApprovals,
-      });
+      items.push(
+        {
+          path: "/approvals",
+          label: "Approvals",
+          icon: "✅",
+          badge: pendingApprovals,
+        },
+        {
+          path: "/notifications",
+          label: "Notifications",
+          icon: "🔔",
+          badge: unreadNotifications,
+        }
+      );
     }
 
     // Full menu for admin
@@ -102,17 +117,33 @@ const Sidebar = ({ isMobileOpen, onLinkClick }) => {
         },
         { path: "/bid-management", label: "Bid Management", icon: "🏆" },
         { path: "/users", label: "User Management", icon: "👥" },
-        { path: "/suppliers", label: "Suppliers", icon: "🏢" }
+        { path: "/suppliers", label: "Suppliers", icon: "🏢" },
+        { path: "/supplier-map", label: "Supplier Map", icon: "🗺️" },
+        { path: "/reports", label: "Reports", icon: "📈" },
+        {
+          path: "/notifications",
+          label: "Notifications",
+          icon: "🔔",
+          badge: unreadNotifications,
+        }
       );
     }
 
     // Minimal menu for supplier
     if (user?.role === "supplier") {
-      items.push({
-        path: "/supplier-bids",
-        label: "Available Bids",
-        icon: "💰",
-      });
+      items.push(
+        {
+          path: "/supplier-bids",
+          label: "Available Bids",
+          icon: "💰",
+        },
+        {
+          path: "/notifications",
+          label: "Notifications",
+          icon: "🔔",
+          badge: unreadNotifications,
+        }
+      );
     }
 
     // Profile for all roles except admin (admin already has it in their full menu)
