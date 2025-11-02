@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const { asyncHandler } = require('../middlewares');
 const generateToken = require('../utils/generateToken');
+const Supplier = require('../models/Supplier');
 
 // @desc    Register a new user
 // @route   POST /api/auth/register

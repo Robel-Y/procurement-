@@ -16,8 +16,8 @@ const validateRegister = (req, res, next) => {
     errors.push('Password must be at least 6 characters long');
   }
 
-  if (role && !['admin', 'user'].includes(role)) {
-    errors.push('Invalid role. Must be either "admin" or "user"');
+  if (role && !['admin', 'user', 'supplier'].includes(role)) {
+    errors.push('Invalid role. Must be either "admin" or "user" or "supplier"');
   }
 
   if (errors.length > 0) {
