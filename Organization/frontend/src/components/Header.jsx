@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getInitials } from "../utils/helpers";
+import Icon from "./Icon";
 
 const Header = ({ onMenuToggle, isMobileOpen }) => {
   const { user, logout } = useAuth();
@@ -156,10 +157,12 @@ const Header = ({ onMenuToggle, isMobileOpen }) => {
             onClick={onMenuToggle}
             aria-label="Toggle menu"
           >
-            {isMobileOpen ? "✕" : "☰"}
+            {isMobileOpen ? <Icon name="refresh" /> : <Icon name="list" />}
           </button>
           <a href="/" className="logo">
-            <span className="logo-icon">🏢</span>
+            <span className="logo-icon">
+              <Icon name="home" size={18} />
+            </span>
             <span>Procurement Pro</span>
           </a>
         </div>
@@ -172,7 +175,9 @@ const Header = ({ onMenuToggle, isMobileOpen }) => {
               onClick={toggleNotifications}
               aria-label="Notifications"
             >
-              <span className="notification-icon">🔔</span>
+              <span className="notification-icon">
+                <Icon name="bell" size={18} />
+              </span>
               {unreadCount > 0 && (
                 <span className="notification-badge">{unreadCount}</span>
               )}

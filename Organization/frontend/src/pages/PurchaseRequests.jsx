@@ -1,18 +1,18 @@
-// src/pages/PurchaseRequests.js
+// src/pages/PurchaseRequests.jsx - Updated with working Edit functionality
 import React, { useState, useEffect } from "react";
 import { purchaseRequestService } from "../services/purchaseRequests";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency, formatDate, getErrorMessage } from "../utils/helpers";
 import Spinner from "../components/Spinner";
-import CreateRequestModal from "../components/CreateRequestModal";
+import { useNavigate } from "react-router-dom";
 
 const PurchaseRequests = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchRequests();
@@ -23,44 +23,74 @@ const PurchaseRequests = () => {
       setLoading(true);
       setError("");
 
-      let response;
-      if (user?.role === "requester") {
+      const response = await purchaseRequestService.getAll();
+      console.log("PurchaseRequests API Response:", response);
+
+      if (response.success) {
+        const allRequests = response.data?.data || response.data || [];
+
+        if (!Array.isArray(allRequests)) {
+          setError("Invalid data format received from server");
+          return;
+        }
+
+        let filteredRequests = allRequests;
+
         // For requesters, only show their requests
-        response = await purchaseRequestService.getAll();
-        if (response.success) {
-          const myRequests = response.data.filter(
+        if (user?.role === "requester") {
+          filteredRequests = allRequests.filter(
             (req) =>
               req.requestedBy?._id === user._id || req.requestedBy === user._id
           );
-          setRequests(myRequests);
         }
-      } else {
-        // For admin and approvers, show all requests
-        response = await purchaseRequestService.getAll();
-        if (response.success) {
-          setRequests(response.data);
-        }
-      }
 
-      if (!response.success) {
-        setError("Failed to load requests");
+        setRequests(filteredRequests);
+      } else {
+        setError(response.error || "Failed to load requests");
       }
     } catch (error) {
       const errorMsg = getErrorMessage(error);
       setError(errorMsg);
+      console.error("Fetch requests error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRequestCreated = (newRequest) => {
-    // Add the new request to the beginning of the list
-    setRequests((prev) => [newRequest, ...prev]);
-    // You might want to show a success message here
+  // FIXED: Edit request function
+  const handleEditRequest = (requestId) => {
+    console.log("Editing request:", requestId);
+    navigate(`/purchase-requests/${requestId}?edit=true`);
+  };
+
+  const handleViewRequest = (requestId) => {
+    navigate(`/purchase-requests/${requestId}`);
+  };
+
+  const handleCreateRequest = () => {
+    navigate("/create-purchase-request");
+  };
+
+  const handleSubmitRequest = async (requestId) => {
+    try {
+      setError("");
+      const response = await purchaseRequestService.submit(requestId);
+
+      if (response.success) {
+        // Refresh the list
+        fetchRequests();
+      } else {
+        setError(response.error || "Failed to submit request");
+      }
+    } catch (error) {
+      setError(getErrorMessage(error));
+    }
   };
 
   const getStatusBadgeClass = (status) => {
-    switch (status?.toLowerCase()) {
+    if (!status) return "badge-draft";
+
+    switch (status.toLowerCase()) {
       case "draft":
         return "badge-draft";
       case "submitted":
@@ -70,17 +100,41 @@ const PurchaseRequests = () => {
         return "badge-approved";
       case "rejected":
         return "badge-rejected";
+      case "ordered":
+        return "badge-success";
       default:
         return "badge-draft";
     }
   };
 
   const canCreateRequest = user?.role === "admin" || user?.role === "requester";
+  const canEditRequest = (request) => {
+    return (
+      (user?.role === "admin" || user?.role === "requester") &&
+      request.status === "draft"
+    );
+  };
 
-  const filteredRequests = requests.filter((request) => {
+  const safeRequests = Array.isArray(requests) ? requests : [];
+
+  const filteredRequests = safeRequests.filter((request) => {
     if (filter === "all") return true;
+    if (filter === "submitted") {
+      return request.status === "submitted" || request.status === "pending";
+    }
     return request.status === filter;
   });
+
+  const getRequestCount = (status) => {
+    if (!Array.isArray(safeRequests)) return 0;
+
+    if (status === "submitted") {
+      return safeRequests.filter(
+        (r) => r.status === "submitted" || r.status === "pending"
+      ).length;
+    }
+    return safeRequests.filter((r) => r.status === status).length;
+  };
 
   if (loading) {
     return (
@@ -107,10 +161,7 @@ const PurchaseRequests = () => {
 
         <div className="d-flex gap-2">
           {canCreateRequest && (
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowCreateModal(true)}
-            >
+            <button className="btn btn-primary" onClick={handleCreateRequest}>
               ➕ Create Request
             </button>
           )}
@@ -130,8 +181,11 @@ const PurchaseRequests = () => {
             <div>
               <strong>Error:</strong> {error}
             </div>
-            <button onClick={fetchRequests} className="btn btn-outline btn-sm">
-              Retry
+            <button
+              onClick={() => setError("")}
+              className="btn btn-sm btn-outline"
+            >
+              ×
             </button>
           </div>
         </div>
@@ -147,7 +201,7 @@ const PurchaseRequests = () => {
               }`}
               onClick={() => setFilter("all")}
             >
-              All ({requests.length})
+              All ({safeRequests.length})
             </button>
             <button
               className={`btn btn-sm ${
@@ -155,7 +209,7 @@ const PurchaseRequests = () => {
               }`}
               onClick={() => setFilter("draft")}
             >
-              Draft ({requests.filter((r) => r.status === "draft").length})
+              Draft ({getRequestCount("draft")})
             </button>
             <button
               className={`btn btn-sm ${
@@ -163,13 +217,7 @@ const PurchaseRequests = () => {
               }`}
               onClick={() => setFilter("submitted")}
             >
-              Pending (
-              {
-                requests.filter(
-                  (r) => r.status === "submitted" || r.status === "pending"
-                ).length
-              }
-              )
+              Pending ({getRequestCount("submitted")})
             </button>
             <button
               className={`btn btn-sm ${
@@ -177,8 +225,7 @@ const PurchaseRequests = () => {
               }`}
               onClick={() => setFilter("approved")}
             >
-              Approved ({requests.filter((r) => r.status === "approved").length}
-              )
+              Approved ({getRequestCount("approved")})
             </button>
             <button
               className={`btn btn-sm ${
@@ -186,8 +233,7 @@ const PurchaseRequests = () => {
               }`}
               onClick={() => setFilter("rejected")}
             >
-              Rejected ({requests.filter((r) => r.status === "rejected").length}
-              )
+              Rejected ({getRequestCount("rejected")})
             </button>
           </div>
         </div>
@@ -242,15 +288,29 @@ const PurchaseRequests = () => {
                     <td>{formatDate(request.createdAt)}</td>
                     <td>
                       <div className="d-flex gap-1">
-                        <a
-                          href={`/purchase-requests/${request._id}`}
+                        <button
+                          onClick={() => handleViewRequest(request._id)}
                           className="btn btn-outline btn-sm"
                         >
                           View
-                        </a>
-                        {request.status === "draft" && canCreateRequest && (
-                          <button className="btn btn-outline btn-sm">
+                        </button>
+
+                        {/* FIXED: Edit button now works */}
+                        {canEditRequest(request) && (
+                          <button
+                            onClick={() => handleEditRequest(request._id)}
+                            className="btn btn-outline btn-sm"
+                          >
                             Edit
+                          </button>
+                        )}
+
+                        {request.status === "draft" && canCreateRequest && (
+                          <button
+                            onClick={() => handleSubmitRequest(request._id)}
+                            className="btn btn-primary btn-sm"
+                          >
+                            Submit
                           </button>
                         )}
                       </div>
@@ -273,7 +333,7 @@ const PurchaseRequests = () => {
               {canCreateRequest && filter === "all" && (
                 <button
                   className="btn btn-primary mt-2"
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={handleCreateRequest}
                 >
                   Create Your First Request
                 </button>
@@ -282,13 +342,6 @@ const PurchaseRequests = () => {
           </div>
         )}
       </div>
-
-      {/* Create Request Modal */}
-      <CreateRequestModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onRequestCreated={handleRequestCreated}
-      />
     </div>
   );
 };

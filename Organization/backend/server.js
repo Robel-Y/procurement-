@@ -13,6 +13,7 @@ const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const purchaseRequestRoutes = require("./routes/purchaseRequests");
 const purchaseOrderRoutes = require("./routes/purchaseOrders");
+const publicRoutes = require("./routes/publicOrders");
 const supplierRoutes = require("./routes/centralSuppliers");
 
 // Middleware imports
@@ -53,6 +54,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/purchase-requests", purchaseRequestRoutes);
 app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/suppliers", supplierRoutes);
+app.use("/api/public", publicRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

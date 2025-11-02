@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { userService } from "../services/userService";
 
-const UserRegistration = () => {
+const UserRegistration = ({ onSuccess } = {}) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -114,6 +114,8 @@ const UserRegistration = () => {
           department: "",
           phone: "",
         });
+        // call optional callback (e.g., to close a modal and refresh list)
+        if (typeof onSuccess === "function") onSuccess();
       } else {
         setMessage({
           type: "error",
@@ -366,7 +368,7 @@ const UserRegistration = () => {
         <div className="card-header">
           <h3 className="card-title">Role Permissions</h3>
         </div>
-       
+
         <div className="p-3">
           <div className="row">
             <div className="col-3">

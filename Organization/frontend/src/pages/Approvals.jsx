@@ -29,16 +29,24 @@ const Approvals = () => {
   const fetchPendingApprovals = async () => {
     try {
       setLoading(true);
+      setError("");
       const response = await purchaseRequestService.getAll({
         status: "submitted",
       });
+
       if (response.success) {
-        setRequests(response.data || []);
+        // Safely extract the array of requests
+        const allRequests = Array.isArray(response.data?.data)
+          ? response.data.data
+          : [];
+        setRequests(allRequests);
       } else {
         setError(response.error || "Failed to load pending approvals");
+        setRequests([]);
       }
     } catch (error) {
       setError("Failed to fetch data from server");
+      setRequests([]);
     } finally {
       setLoading(false);
     }
@@ -200,88 +208,100 @@ const Approvals = () => {
       >
         {approvalModal.request && (
           <div>
-            <div className="form-group">
-              <label className="form-label">Request Title</label>
-              <input
-                type="text"
-                className="form-control"
-                value={approvalModal.request.title}
-                disabled
-              />
+            <div style={{ marginBottom: 12 }}>
+              <strong>{approvalModal.request.title}</strong>
+              <div style={{ color: "var(--text-light)", marginTop: 6 }}>
+                {approvalModal.request.description}
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea
-                className="form-control"
-                value={approvalModal.request.description}
-                disabled
-                rows="3"
-              />
+            <div className="grid grid-2" style={{ gap: 12 }}>
+              <div>
+                <div>
+                  <strong>Category</strong>
+                  <div style={{ color: "var(--text-light)" }}>
+                    {approvalModal.request.category}
+                  </div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <strong>Quantity</strong>
+                  <div style={{ color: "var(--text-light)" }}>
+                    {approvalModal.request.quantity}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div>
+                  <strong>Budget</strong>
+                  <div style={{ color: "var(--text-light)" }}>
+                    {formatCurrency(approvalModal.request.budget)}
+                  </div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <strong>Requested By</strong>
+                  <div style={{ color: "var(--text-light)" }}>
+                    {approvalModal.request.requestedBy?.name} •{" "}
+                    {approvalModal.request.department}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Budget</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formatCurrency(approvalModal.request.budget)}
-                disabled
-              />
-            </div>
+            <hr style={{ margin: "12px 0" }} />
 
-            <div className="form-group">
-              <label className="form-label">Decision</label>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", marginBottom: 6 }}>
+                Decision
+              </label>
               <select
-                className="form-control"
                 value={approvalData.status}
                 onChange={(e) =>
                   setApprovalData({ ...approvalData, status: e.target.value })
                 }
-                disabled={actionLoading === "approval"}
+                className="form-control"
+                disabled={!!actionLoading}
               >
                 <option value="approved">Approve</option>
                 <option value="rejected">Reject</option>
               </select>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Comments</label>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", marginBottom: 6 }}>
+                Comments (optional)
+              </label>
               <textarea
-                className="form-control"
                 value={approvalData.comments}
                 onChange={(e) =>
                   setApprovalData({ ...approvalData, comments: e.target.value })
                 }
-                placeholder="Enter comments for your decision"
-                disabled={actionLoading === "approval"}
-                rows="3"
+                className="form-control"
+                rows={4}
+                disabled={!!actionLoading}
               />
             </div>
 
-            <div className="d-flex justify-between gap-2">
+            <div className="d-flex justify-end" style={{ gap: 8 }}>
               <button
+                className="btn btn-outline"
                 onClick={() =>
                   setApprovalModal({ isOpen: false, request: null })
                 }
-                className="btn btn-outline"
-                disabled={actionLoading === "approval"}
+                disabled={!!actionLoading}
               >
                 Cancel
               </button>
               <button
+                className="btn btn-primary"
                 onClick={handleApprove}
-                className="btn btn-success"
-                disabled={actionLoading === "approval"}
+                disabled={!!actionLoading}
               >
-                {actionLoading === "approval" ? (
-                  <>
-                    <Spinner size="sm" />
-                    Processing...
-                  </>
-                ) : (
-                  "Submit Decision"
-                )}
+                {actionLoading
+                  ? "Processing..."
+                  : approvalData.status === "approved"
+                  ? "Submit Approval"
+                  : "Submit Rejection"}
               </button>
             </div>
           </div>

@@ -1,8 +1,10 @@
 // src/pages/Reports.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { purchaseRequestService } from "../services/purchaseRequests";
 import { userService } from "../services/userService";
+import Modal from "../components/Modal";
+import Icon from "../components/Icon";
 
 const Reports = () => {
   const { user } = useAuth();
@@ -175,34 +177,152 @@ const Reports = () => {
 
   // Functional button handlers
   const handleExportReport = (type) => {
-    // Simulate export functionality
-    console.log(`Exporting ${type} report...`);
-    alert(`${type} report exported successfully!`);
+    // Export CSV for the requested type
+    try {
+      const csv = buildCSVForType(type || activeReport);
+      downloadCSV(csv, `${type || activeReport}-report.csv`);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Failed to export report. See console for details.");
+    }
   };
 
   const handleGenerateCustomReport = () => {
-    const reportType = prompt(
-      "Enter report type (e.g., Monthly, Quarterly, Department-wise):"
-    );
-    if (reportType) {
-      alert(
-        `Generating custom ${reportType} report...\nThis would typically open a report builder or send a request to the backend.`
-      );
-    }
+    setShowCustomModal(true);
   };
 
   const handleScheduleReport = () => {
-    const email = prompt("Enter email for scheduled reports:");
-    const frequency = prompt("Enter frequency (daily, weekly, monthly):");
-    if (email && frequency) {
-      alert(`Report scheduled for ${frequency} delivery to ${email}`);
-    }
+    setShowScheduleModal(true);
   };
 
   const handleRunAudit = () => {
-    alert(
-      "Running procurement audit...\nThis would trigger backend audit processes and generate compliance reports."
-    );
+    // Open audit modal
+    setShowAuditModal(true);
+  };
+
+  // Printable ref for PDF/print export
+  const printableRef = useRef();
+
+  const handleExportPDF = () => {
+    // Open a new window and write the report HTML for printing
+    try {
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) throw new Error("Popup blocked");
+
+      const content = printableRef.current
+        ? printableRef.current.innerHTML
+        : document.body.innerHTML;
+
+      printWindow.document.open();
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Report - ${activeReport}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              table { border-collapse: collapse; width: 100%; }
+              table, th, td { border: 1px solid #ddd; padding: 8px; }
+              th { background: #f4f4f4; }
+            </style>
+          </head>
+          <body>
+            <h1>Report: ${activeReport}</h1>
+            ${content}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        // Optionally close after printing
+        // printWindow.close();
+      }, 500);
+    } catch (err) {
+      console.error("PDF export failed:", err);
+      alert("Unable to open print window. Please allow popups and try again.");
+    }
+  };
+
+  // Helpers for CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const buildCSVForType = (type) => {
+    let rows = [];
+    if (type === "departments" || type === "departmentPerformance") {
+      rows.push([
+        "Department",
+        "Efficiency",
+        "AvgProcessingTime",
+        "BudgetUsed",
+      ]);
+      reportData.departmentPerformance.forEach((d) => {
+        rows.push([
+          d.department,
+          d.efficiency,
+          d.avgProcessingTime,
+          d.budgetUsed,
+        ]);
+      });
+    } else if (type === "suppliers" || type === "supplierPerformance") {
+      rows.push(["Supplier", "DeliveryTime", "Quality", "Compliance"]);
+      reportData.supplierPerformance.forEach((s) => {
+        rows.push([s.name, s.deliveryTime, s.quality, s.compliance]);
+      });
+    } else if (type === "budget") {
+      rows.push(["Category", "Allocated", "Used", "Utilization"]);
+      reportData.budgetUtilization.forEach((b) => {
+        rows.push([b.category, b.allocated, b.used, b.utilization]);
+      });
+    } else if (type === "savings" || type === "costSavings") {
+      rows.push(["Month", "Projected", "Actual", "Savings"]);
+      (uniqueReportData.costSavings || []).forEach((c) => {
+        rows.push([c.month, c.projected, c.actual, c.savings]);
+      });
+    } else {
+      // default overview/analytics
+      rows.push(["Metric", "Value"]);
+      Object.entries(reportData.analytics || {}).forEach(([k, v]) => {
+        rows.push([k, v]);
+      });
+    }
+
+    // Convert rows to CSV string
+    return rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+  };
+
+  // Modals state
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+
+  const handleSubmitCustom = (payload) => {
+    // For demo, just alert and close
+    alert(`Custom report requested: ${JSON.stringify(payload)}`);
+    setShowCustomModal(false);
+  };
+
+  const handleSubmitSchedule = (payload) => {
+    alert(`Report scheduled: ${JSON.stringify(payload)}`);
+    setShowScheduleModal(false);
+  };
+
+  const handleConfirmAudit = () => {
+    // Simulate running audit
+    alert("Audit started. You will be notified when it completes.");
+    setShowAuditModal(false);
   };
 
   if (loading) {
@@ -242,12 +362,97 @@ const Reports = () => {
               <option value="quarter">This Quarter</option>
               <option value="year">This Year</option>
             </select>
-            <button
-              onClick={() => handleExportReport("comprehensive")}
-              className="btn btn-outline"
-            >
-              📊 Export PDF
+            <button onClick={handleExportPDF} className="btn btn-outline">
+              <Icon name="printer" size={16} />
+              <span style={{ marginLeft: 8 }}>Export PDF</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Printable area for Export PDF */}
+      <div ref={printableRef}>
+        {/* Simple printable summary (used by Export PDF) */}
+        <div className="card mb-3">
+          <div className="card-header">
+            <h3 className="card-title">Printable Summary</h3>
+          </div>
+          <div className="p-3">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td style={{ padding: 8, border: "1px solid #ddd" }}>
+                    <strong>Total Requests</strong>
+                  </td>
+                  <td style={{ padding: 8, border: "1px solid #ddd" }}>
+                    {reportData.analytics.totalRequests || 0}
+                  </td>
+                  <td style={{ padding: 8, border: "1px solid #ddd" }}>
+                    <strong>Avg Approval Time</strong>
+                  </td>
+                  <td style={{ padding: 8, border: "1px solid #ddd" }}>
+                    {reportData.analytics.avgApprovalTime || "-"} days
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: 8, border: "1px solid #ddd" }}>
+                    <strong>Cost Savings</strong>
+                  </td>
+                  <td style={{ padding: 8, border: "1px solid #ddd" }}>
+                    ${reportData.analytics.costSavings || 0}
+                  </td>
+                  <td style={{ padding: 8, border: "1px solid #ddd" }}>
+                    <strong>Compliance</strong>
+                  </td>
+                  <td style={{ padding: 8, border: "1px solid #ddd" }}>
+                    {reportData.analytics.complianceRate || "-"}%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Small sample table: first few departments */}
+            <div style={{ marginTop: 12 }}>
+              <strong>Top Departments</strong>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  marginTop: 8,
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={{ border: "1px solid #ddd", padding: 6 }}>
+                      Department
+                    </th>
+                    <th style={{ border: "1px solid #ddd", padding: 6 }}>
+                      Efficiency
+                    </th>
+                    <th style={{ border: "1px solid #ddd", padding: 6 }}>
+                      Avg Processing
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(reportData.departmentPerformance || [])
+                    .slice(0, 5)
+                    .map((d) => (
+                      <tr key={d.department}>
+                        <td style={{ border: "1px solid #ddd", padding: 6 }}>
+                          {d.department}
+                        </td>
+                        <td style={{ border: "1px solid #ddd", padding: 6 }}>
+                          {d.efficiency}%
+                        </td>
+                        <td style={{ border: "1px solid #ddd", padding: 6 }}>
+                          {d.avgProcessingTime} days
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -465,7 +670,8 @@ const Reports = () => {
                 className="btn btn-outline btn-block mb-2"
                 onClick={() => handleExportReport("detailed")}
               >
-                📋 Export Detailed Report
+                <Icon name="file" size={14} />
+                <span style={{ marginLeft: 8 }}>Export Detailed Report</span>
               </button>
             </div>
             <div className="col-3">
@@ -473,7 +679,8 @@ const Reports = () => {
                 className="btn btn-outline btn-block mb-2"
                 onClick={handleGenerateCustomReport}
               >
-                🛠️ Custom Report
+                <Icon name="zap" size={14} />
+                <span style={{ marginLeft: 8 }}>Custom Report</span>
               </button>
             </div>
             <div className="col-3">
@@ -481,7 +688,8 @@ const Reports = () => {
                 className="btn btn-outline btn-block mb-2"
                 onClick={handleScheduleReport}
               >
-                ⏰ Schedule Report
+                <Icon name="calendar" size={14} />
+                <span style={{ marginLeft: 8 }}>Schedule Report</span>
               </button>
             </div>
             <div className="col-3">
@@ -489,7 +697,8 @@ const Reports = () => {
                 className="btn btn-outline btn-block mb-2"
                 onClick={handleRunAudit}
               >
-                🔍 Run Audit
+                <Icon name="shield" size={14} />
+                <span style={{ marginLeft: 8 }}>Run Audit</span>
               </button>
             </div>
           </div>
@@ -499,7 +708,8 @@ const Reports = () => {
                 className="btn btn-primary btn-block"
                 onClick={() => handleExportReport("executive")}
               >
-                👔 Executive Summary
+                <Icon name="award" size={14} />
+                <span style={{ marginLeft: 8 }}>Executive Summary</span>
               </button>
             </div>
             <div className="col-4">
@@ -507,7 +717,8 @@ const Reports = () => {
                 className="btn btn-warning btn-block"
                 onClick={() => handleExportReport("compliance")}
               >
-                📝 Compliance Report
+                <Icon name="shield" size={14} />
+                <span style={{ marginLeft: 8 }}>Compliance Report</span>
               </button>
             </div>
             <div className="col-4">
@@ -515,12 +726,59 @@ const Reports = () => {
                 className="btn btn-success btn-block"
                 onClick={() => handleExportReport("performance")}
               >
-                📊 Performance Review
+                <Icon name="bar" size={14} />
+                <span style={{ marginLeft: 8 }}>Performance Review</span>
               </button>
             </div>
           </div>
         </div>
       </div>
+      {/* Modals */}
+      <Modal
+        isOpen={showCustomModal}
+        onClose={() => setShowCustomModal(false)}
+        title="Custom Report Builder"
+      >
+        <CustomReportForm
+          onCancel={() => setShowCustomModal(false)}
+          onSubmit={handleSubmitCustom}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        title="Schedule Report"
+      >
+        <ScheduleReportForm
+          onCancel={() => setShowScheduleModal(false)}
+          onSubmit={handleSubmitSchedule}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={showAuditModal}
+        onClose={() => setShowAuditModal(false)}
+        title="Run Audit"
+      >
+        <div>
+          <p>
+            Are you sure you want to run a procurement audit now? This may take
+            some time.
+          </p>
+          <div className="d-flex justify-end" style={{ gap: 8 }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => setShowAuditModal(false)}
+            >
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={handleConfirmAudit}>
+              Run Audit
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -548,6 +806,132 @@ const getPerformanceText = (efficiency) => {
   if (efficiency >= 90) return "Excellent";
   if (efficiency >= 80) return "Good";
   return "Needs Improvement";
+};
+
+// Small form components used by modals
+const CustomReportForm = ({ onCancel, onSubmit }) => {
+  const [name, setName] = useState("");
+  const [scope, setScope] = useState("overview");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+
+  return (
+    <div>
+      <div className="form-group">
+        <label>Report Name</label>
+        <input
+          className="form-control"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <div className="form-group">
+        <label>Scope</label>
+        <select
+          className="form-control"
+          value={scope}
+          onChange={(e) => setScope(e.target.value)}
+        >
+          <option value="overview">Overview</option>
+          <option value="departments">Departments</option>
+          <option value="suppliers">Suppliers</option>
+          <option value="budget">Budget</option>
+          <option value="savings">Cost Savings</option>
+        </select>
+      </div>
+      <div className="row">
+        <div className="col-6">
+          <div className="form-group">
+            <label>Start Date</label>
+            <input
+              type="date"
+              className="form-control"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="col-6">
+          <div className="form-group">
+            <label>End Date</label>
+            <input
+              type="date"
+              className="form-control"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="d-flex justify-end" style={{ gap: 8, marginTop: 12 }}>
+        <button className="btn btn-outline" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={() => onSubmit({ name, scope, start, end })}
+        >
+          Generate
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const ScheduleReportForm = ({ onCancel, onSubmit }) => {
+  const [email, setEmail] = useState("");
+  const [frequency, setFrequency] = useState("monthly");
+  const [reportType, setReportType] = useState("overview");
+
+  return (
+    <div>
+      <div className="form-group">
+        <label>Email</label>
+        <input
+          className="form-control"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@company.com"
+        />
+      </div>
+      <div className="form-group">
+        <label>Frequency</label>
+        <select
+          className="form-control"
+          value={frequency}
+          onChange={(e) => setFrequency(e.target.value)}
+        >
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label>Report Type</label>
+        <select
+          className="form-control"
+          value={reportType}
+          onChange={(e) => setReportType(e.target.value)}
+        >
+          <option value="overview">Overview</option>
+          <option value="departments">Departments</option>
+          <option value="suppliers">Suppliers</option>
+          <option value="budget">Budget</option>
+        </select>
+      </div>
+      <div className="d-flex justify-end" style={{ gap: 8, marginTop: 12 }}>
+        <button className="btn btn-outline" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={() => onSubmit({ email, frequency, reportType })}
+        >
+          Schedule
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default Reports;

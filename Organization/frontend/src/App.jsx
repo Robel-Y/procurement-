@@ -7,6 +7,9 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import PurchaseRequests from "./pages/PurchaseRequests";
 import CreatePurchaseRequest from "./pages/CreatePurchaseRequest";
+import UserRegistration from "./pages/UserRegistration";
+import Users from "./pages/Users";
+import Reports from "./pages/Reports";
 import Suppliers from "./pages/Suppliers";
 import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -17,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import BidManagement from "./pages/BidManagement";
 import SupplierBids from "./pages/SupplierBids";
 import SupplierMapPage from "./pages/SupplierMapPage"; // Add this import
+import Notifications from "./pages/Notifications";
 
 const Layout = ({ children }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -138,11 +142,53 @@ function App() {
             }
           />
           <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Notifications />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/profile"
             element={
               <ProtectedRoute>
                 <Layout>
                   <Profile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserRegistration />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Users list for admin */}
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Users />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Reports route */}
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Reports />
                 </Layout>
               </ProtectedRoute>
             }

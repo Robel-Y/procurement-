@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { purchaseRequestService } from "../services/purchaseRequests";
 import { userService } from "../services/userService";
 import { formatCurrency, formatDate, getErrorMessage } from "../utils/helpers";
 import Spinner from "../components/Spinner";
+import Icon from "../components/Icon";
 
 const DashboardAdmin = () => {
   const [stats, setStats] = useState({
@@ -32,52 +34,54 @@ const DashboardAdmin = () => {
         purchaseRequestService.getAll(),
         userService.getUsers(),
       ]);
-      console.log(requestsResponse);
-      console.log(usersResponse);
 
-      if (requestsResponse.success && usersResponse.success) {
-        const allRequests = requestsResponse.data || [];
-        const allUsers = usersResponse.data || [];
+      // Extract arrays safely
+      const allRequests = Array.isArray(requestsResponse?.data?.data)
+        ? requestsResponse.data.data
+        : [];
+      const allUsersRaw = usersResponse?.data || {};
+      const allUsers = Array.isArray(allUsersRaw)
+        ? allUsersRaw
+        : Array.isArray(allUsersRaw.data)
+        ? allUsersRaw.data
+        : Array.isArray(allUsersRaw.items)
+        ? allUsersRaw.items
+        : [];
 
-        // Calculate stats
-        const totalRequests = allRequests.length;
-        const pendingRequests = allRequests.filter(
-          (req) => req.status === "submitted" || req.status === "pending"
-        ).length;
-        const approvedRequests = allRequests.filter(
-          (req) => req.status === "approved"
-        ).length;
-        const rejectedRequests = allRequests.filter(
-          (req) => req.status === "rejected"
-        ).length;
-        const totalBudget = allRequests.reduce(
-          (sum, req) => sum + (req.budget || 0),
-          0
-        );
-        const totalUsers = allUsers.length;
-        const pendingApprovals = allRequests.filter(
-          (req) => req.status === "submitted" || req.status === "pending"
-        ).length;
+      // Calculate stats
+      const totalRequests = allRequests.length;
+      const pendingRequests = allRequests.filter(
+        (req) => req.status === "submitted" || req.status === "pending"
+      ).length;
+      const approvedRequests = allRequests.filter(
+        (req) => req.status === "approved"
+      ).length;
+      const rejectedRequests = allRequests.filter(
+        (req) => req.status === "rejected"
+      ).length;
+      const totalBudget = allRequests.reduce(
+        (sum, req) => sum + (req.budget || 0),
+        0
+      );
+      const totalUsers = allUsers.length;
+      const pendingApprovals = pendingRequests;
 
-        setStats({
-          totalRequests,
-          pendingRequests,
-          approvedRequests,
-          rejectedRequests,
-          totalBudget,
-          totalUsers,
-          pendingApprovals,
-        });
+      setStats({
+        totalRequests,
+        pendingRequests,
+        approvedRequests,
+        rejectedRequests,
+        totalBudget,
+        totalUsers,
+        pendingApprovals,
+      });
 
-        // Get recent requests (last 5)
-        const sortedRequests = allRequests
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 5);
+      // Get recent requests (last 5)
+      const sortedRequests = [...allRequests]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
 
-        setRecentRequests(sortedRequests);
-      } else {
-        setError("Failed to load dashboard data");
-      }
+      setRecentRequests(sortedRequests);
     } catch (error) {
       const errorMsg = getErrorMessage(error);
       setError(errorMsg);
@@ -125,7 +129,14 @@ const DashboardAdmin = () => {
           className="btn btn-outline"
           disabled={loading}
         >
-          {loading ? <Spinner size="sm" /> : "🔄 Refresh"}
+          {loading ? (
+            <Spinner size="sm" />
+          ) : (
+            <>
+              <Icon name="refresh" />
+              <span style={{ marginLeft: 8 }}>Refresh</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -158,7 +169,10 @@ const DashboardAdmin = () => {
       {/* Admin-specific Stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-value">📊 {stats.totalRequests}</div>
+          <div className="stat-value">
+            <Icon name="bar" size={20} />
+            <span style={{ marginLeft: 8 }}>{stats.totalRequests}</span>
+          </div>
           <div className="stat-label">Total Requests</div>
         </div>
 
@@ -166,29 +180,44 @@ const DashboardAdmin = () => {
           className="stat-card"
           style={{ borderLeft: "4px solid var(--warning)" }}
         >
-          <div className="stat-value">👀 {stats.pendingApprovals}</div>
+          <div className="stat-value">
+            <Icon name="bell" size={20} />
+            <span style={{ marginLeft: 8 }}>{stats.pendingApprovals}</span>
+          </div>
           <div className="stat-label">Pending Approvals</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-value">✅ {stats.approvedRequests}</div>
+          <div className="stat-value">
+            <Icon name="check" size={20} />
+            <span style={{ marginLeft: 8 }}>{stats.approvedRequests}</span>
+          </div>
           <div className="stat-label">Approved</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-value">❌ {stats.rejectedRequests}</div>
+          <div className="stat-value">
+            <Icon name="trash" size={20} />
+            <span style={{ marginLeft: 8 }}>{stats.rejectedRequests}</span>
+          </div>
           <div className="stat-label">Rejected</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-value">
-            💰 {formatCurrency(stats.totalBudget)}
+            <Icon name="download" size={18} />
+            <span style={{ marginLeft: 8 }}>
+              {formatCurrency(stats.totalBudget)}
+            </span>
           </div>
           <div className="stat-label">Total Budget</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-value">👥 {stats.totalUsers}</div>
+          <div className="stat-value">
+            <Icon name="users" size={18} />
+            <span style={{ marginLeft: 8 }}>{stats.totalUsers}</span>
+          </div>
           <div className="stat-label">Total Users</div>
         </div>
       </div>
@@ -197,9 +226,9 @@ const DashboardAdmin = () => {
       <div className="card">
         <div className="card-header">
           <h2 className="card-title mb-0">Recent System Activity</h2>
-          <a href="/purchase-requests" className="btn btn-outline btn-sm">
+          <Link to="/purchase-requests" className="btn btn-outline btn-sm">
             View All
-          </a>
+          </Link>
         </div>
 
         {recentRequests.length > 0 ? (
@@ -252,7 +281,9 @@ const DashboardAdmin = () => {
         ) : (
           <div className="text-center p-4">
             <div className="empty-state">
-              <div className="empty-state-icon">📋</div>
+              <div className="empty-state-icon">
+                <Icon name="file" size={28} />
+              </div>
               <h3>No Activity</h3>
               <p>No purchase requests in the system yet.</p>
             </div>
@@ -267,18 +298,21 @@ const DashboardAdmin = () => {
         </div>
         <div className="p-3">
           <div className="d-flex gap-2 flex-wrap">
-            <a href="/approvals" className="btn btn-warning">
-              ✅ Review Approvals ({stats.pendingApprovals})
-            </a>
-            <a href="/users" className="btn btn-outline">
-              👥 Manage Users
-            </a>
-            <a href="/suppliers" className="btn btn-outline">
-              🏢 Manage Suppliers
-            </a>
-            <a href="/reports" className="btn btn-outline">
-              📈 View Reports
-            </a>
+            <Link to="/approvals" className="btn btn-warning">
+              <Icon name="check" />
+              <span style={{ marginLeft: 8 }}>
+                Review Approvals ({stats.pendingApprovals})
+              </span>
+            </Link>
+            <Link to="/users" className="btn btn-outline">
+              <Icon name="users" />
+              <span style={{ marginLeft: 8 }}>Manage Users</span>
+            </Link>
+
+            <Link to="/reports" className="btn btn-outline">
+              <Icon name="chart" />
+              <span style={{ marginLeft: 8 }}>View Reports</span>
+            </Link>
           </div>
         </div>
       </div>

@@ -3,13 +3,40 @@ import { api } from "./api";
 export const purchaseRequestService = {
   create: async (data) => {
     try {
-      console.log("Creating purchase request with data:", data);
-      const response = await api.post("/purchase-requests", data);
-      return { success: true, data: response.data };
+      console.log("🔄 Creating purchase request with data:", data);
+
+      // Validate required fields on frontend
+      const requiredFields = ["title", "description", "budget", "category"];
+      const missingFields = requiredFields.filter((field) => !data[field]);
+
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
+      }
+
+      // Ensure budget is a number
+      const requestData = {
+        ...data,
+        budget: Number(data.budget),
+        status: "draft", // Ensure initial status
+      };
+
+      const response = await api.post("/purchase-requests", requestData);
+
+      console.log("✅ Purchase request created successfully:", response);
+
+      return {
+        success: true,
+        data: response,
+      };
     } catch (error) {
+      console.error("❌ Create purchase request failed:", error);
+
       return {
         success: false,
-        error: error.message || "Failed to create purchase request",
+        error:
+          error.message ||
+          "Failed to create purchase request. Please check your connection and try again.",
+        details: error,
       };
     }
   },
@@ -21,22 +48,32 @@ export const purchaseRequestService = {
         ? `/purchase-requests?${queryString}`
         : "/purchase-requests";
 
+      console.log("🔄 Fetching purchase requests:", endpoint);
+
       const response = await api.get(endpoint);
-      console.log("API response for purchase requests:", response.data);
-      return { success: true, data: response.data };
+
+      console.log("✅ Purchase requests fetched:", response);
+
+      return {
+        success: true,
+        data: response,
+      };
     } catch (error) {
-      console.error("Error fetching purchase requests:", error);
+      console.error("❌ Fetch purchase requests failed:", error);
+
       return {
         success: false,
         error: error.message || "Failed to fetch purchase requests",
+        details: error,
       };
     }
   },
 
+  // ... keep your other methods the same
   getById: async (id) => {
     try {
       const response = await api.get(`/purchase-requests/${id}`);
-      return { success: true, data: response.data };
+      return { success: true, data: response };
     } catch (error) {
       return {
         success: false,
@@ -77,34 +114,6 @@ export const purchaseRequestService = {
       return {
         success: false,
         error: error.message || "Failed to approve purchase request",
-      };
-    }
-  },
-
-  // New method to mark as ordered (after bid selection)
-  markAsOrdered: async (id, winningBid) => {
-    try {
-      const response = await api.put(`/purchase-requests/${id}/order`, {
-        winningBid,
-      });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message || "Failed to mark as ordered",
-      };
-    }
-  },
-
-  // Get requests ready for bidding (approved but not ordered)
-  getBiddingRequests: async () => {
-    try {
-      const response = await api.get("/purchase-requests?status=approved");
-      return { success: true, data: response.data };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message || "Failed to fetch bidding requests",
       };
     }
   },

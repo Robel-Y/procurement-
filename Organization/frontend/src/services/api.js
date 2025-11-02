@@ -1,7 +1,7 @@
-// Base API configuration
+// api.js
 const API_BASE_URL = "http://localhost:5000/api";
 
-// Helper function for API calls
+// Enhanced API request function
 const apiRequest = async (endpoint, options = {}) => {
   // Check if user is online
   if (!navigator.onLine) {
@@ -18,39 +18,62 @@ const apiRequest = async (endpoint, options = {}) => {
     ...options,
   };
 
+  // Handle request body
   if (config.body && typeof config.body === "object") {
     config.body = JSON.stringify(config.body);
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  const url = `${API_BASE_URL}${endpoint}`;
 
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      throw new Error("Invalid response from server");
-    }
+  console.log(`🔄 API Call: ${config.method} ${url}`, config.body);
+
+  try {
+    const response = await fetch(url, config);
+
+    console.log(
+      `📨 Response Status: ${response.status} ${response.statusText}`
+    );
 
     // Handle unauthorized responses
     if (response.status === 401) {
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       window.location.href = "/login";
-      throw new Error("Unauthorized - Please login again");
+      throw new Error("Session expired. Please login again.");
     }
 
+    let data;
+    const contentType = response.headers.get("content-type");
+
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      throw new Error(`Expected JSON but got: ${text.substring(0, 100)}`);
+    }
+
+    console.log(`📨 Response Data:`, data);
+
     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        data.message || data.error || `HTTP error! status: ${response.status}`
+      );
     }
 
     return data;
   } catch (error) {
-    console.error("API request failed:", error);
+    console.error("❌ API request failed:", error);
 
-    // Re-throw with better error message
+    // Enhanced error messages
     if (error.message.includes("Failed to fetch")) {
       throw new Error(
-        "Cannot connect to server. Please make sure the backend is running on http://localhost:5000"
+        "Cannot connect to server. Please check:\n1. Backend is running on http://localhost:5000\n2. No CORS issues\n3. Network connectivity"
+      );
+    }
+
+    if (error.message.includes("Unexpected token")) {
+      throw new Error(
+        "Server returned invalid response. Check backend is running properly."
       );
     }
 

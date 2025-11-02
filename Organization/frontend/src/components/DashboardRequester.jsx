@@ -3,9 +3,12 @@ import { purchaseRequestService } from "../services/purchaseRequests";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency, formatDate, getErrorMessage } from "../utils/helpers";
 import Spinner from "../components/Spinner";
+import Icon from "../components/Icon";
+import { useNavigate } from "react-router-dom";
 
 const DashboardRequester = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     myRequests: 0,
     pendingRequests: 0,
@@ -26,17 +29,34 @@ const DashboardRequester = () => {
       setLoading(true);
       setError("");
 
-      // Fetch user's requests
+      console.log("🔄 Fetching requester dashboard data for user:", user?._id);
+
       const response = await purchaseRequestService.getAll();
+      console.log("📊 Requester API Response:", response);
 
       if (response.success) {
-        const allRequests = response.data || [];
+        const allRequests = response.data?.data || response.data || [];
 
-        // Filter to only show current user's requests
-        const myRequests = allRequests.filter(
-          (req) =>
-            req.requestedBy?._id === user._id || req.requestedBy === user._id
-        );
+        if (!Array.isArray(allRequests)) {
+          setError("Invalid data format received from server");
+          return;
+        }
+
+        // Filter user's requests - handle both object ID and string ID
+        const myRequests = allRequests.filter((req) => {
+          const requestedById = req.requestedBy?._id || req.requestedBy;
+          const userId = user?._id;
+          console.log(
+            `🔍 Comparing: Request ${
+              req._id
+            } - RequestedBy: ${requestedById}, User: ${userId}, Match: ${
+              requestedById === userId
+            }`
+          );
+          return requestedById === userId;
+        });
+
+        console.log("👤 My filtered requests:", myRequests);
 
         // Calculate stats
         const pendingRequests = myRequests.filter(
@@ -50,7 +70,7 @@ const DashboardRequester = () => {
         ).length;
         const totalSpent = myRequests
           .filter((req) => req.status === "approved")
-          .reduce((sum, req) => sum + (req.budget || 0), 0);
+          .reduce((sum, req) => sum + (parseFloat(req.budget) || 0), 0);
 
         setStats({
           myRequests: myRequests.length,
@@ -60,9 +80,11 @@ const DashboardRequester = () => {
           totalSpent,
         });
 
-        // Get recent requests (last 5)
+        // Get recent requests
         const sortedRequests = myRequests
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .sort(
+            (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+          )
           .slice(0, 5);
 
         setRecentRequests(sortedRequests);
@@ -71,14 +93,53 @@ const DashboardRequester = () => {
       }
     } catch (error) {
       const errorMsg = getErrorMessage(error);
+      console.error("❌ Requester dashboard error:", error);
       setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
+  // FIXED: Create request function
+  const handleCreateRequest = () => {
+    console.log("🎯 Creating new purchase request...");
+
+    // Try multiple possible routes
+    const possibleRoutes = [
+      "/create-purchase-request",
+      "/purchase-requests/create",
+      "/purchase-requests/new",
+    ];
+
+    // Check which route exists by trying them
+    const createRoute = "/create-purchase-request"; // Use the most common one
+
+    console.log(`📍 Navigating to: ${createRoute}`);
+    navigate(createRoute);
+  };
+
+  const handleViewRequest = (requestId) => {
+    if (requestId) {
+      navigate(`/purchase-requests/${requestId}`);
+    } else {
+      setError("Invalid request ID");
+    }
+  };
+
+  const handleSubmitRequest = (requestId) => {
+    if (requestId) {
+      navigate(`/purchase-requests/${requestId}?action=submit`);
+    }
+  };
+
+  const handleViewAllRequests = () => {
+    navigate("/purchase-requests");
+  };
+
   const getStatusBadgeClass = (status) => {
-    switch (status?.toLowerCase()) {
+    if (!status) return "badge-draft";
+
+    switch (status.toLowerCase()) {
       case "draft":
         return "badge-draft";
       case "submitted":
@@ -88,8 +149,29 @@ const DashboardRequester = () => {
         return "badge-approved";
       case "rejected":
         return "badge-rejected";
+      case "ordered":
+        return "badge-success";
       default:
         return "badge-draft";
+    }
+  };
+
+  const getStatusDisplayText = (status) => {
+    if (!status) return "Draft";
+
+    switch (status.toLowerCase()) {
+      case "submitted":
+        return "Under Review";
+      case "pending":
+        return "Pending";
+      case "approved":
+        return "Approved";
+      case "rejected":
+        return "Rejected";
+      case "ordered":
+        return "Ordered";
+      default:
+        return "Draft";
     }
   };
 
@@ -108,81 +190,101 @@ const DashboardRequester = () => {
         <div>
           <h1 className="card-title mb-1">My Procurement Dashboard</h1>
           <p style={{ color: "var(--text-light)" }}>
-            Track your purchase requests and approvals
+            Welcome back, {user?.name}! Track your purchase requests and
+            approvals
           </p>
+          <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>
+            User ID: {user?._id} • Role: {user?.role} • Department:{" "}
+            {user?.department}
+          </div>
         </div>
         <button
           onClick={fetchDashboardData}
           className="btn btn-outline"
           disabled={loading}
         >
-          {loading ? <Spinner size="sm" /> : "🔄 Refresh"}
+          {loading ? (
+            <Spinner size="sm" />
+          ) : (
+            <>
+              <Icon name="refresh" />
+              <span style={{ marginLeft: 8 }}>Refresh</span>
+            </>
+          )}
         </button>
       </div>
 
       {error && (
-        <div
-          className="card mb-3"
-          style={{
-            background: "var(--error)",
-            color: "white",
-            border: "none",
-          }}
-        >
-          <div className="p-3">
-            <div className="d-flex justify-between align-center">
-              <div>
-                <strong>Error:</strong> {error}
-              </div>
-              <button
-                onClick={fetchDashboardData}
-                className="btn btn-outline btn-sm"
-                style={{ background: "white", color: "var(--error)" }}
-              >
-                Retry
-              </button>
+        <div className="alert alert-error mb-3">
+          <div className="d-flex justify-between align-center">
+            <div>
+              <strong>Error:</strong> {error}
             </div>
+            <button
+              onClick={() => setError("")}
+              className="btn btn-sm btn-outline"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
 
-      {/* Requester-specific Stats */}
+      {/* Stats Grid */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-value">📋 {stats.myRequests}</div>
-          <div className="stat-label">My Requests</div>
+          <div className="stat-value">
+            <Icon name="file" size={20} />
+            <span style={{ marginLeft: 8 }}>{stats.myRequests}</span>
+          </div>
+          <div className="stat-label">Total Requests</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-value">⏳ {stats.pendingRequests}</div>
+          <div className="stat-value">
+            <Icon name="clock" size={20} />
+            <span style={{ marginLeft: 8 }}>{stats.pendingRequests}</span>
+          </div>
           <div className="stat-label">Pending Review</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-value">✅ {stats.approvedRequests}</div>
+          <div className="stat-value">
+            <Icon name="check" size={20} />
+            <span style={{ marginLeft: 8 }}>{stats.approvedRequests}</span>
+          </div>
           <div className="stat-label">Approved</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-value">❌ {stats.rejectedRequests}</div>
+          <div className="stat-value">
+            <Icon name="trash" size={20} />
+            <span style={{ marginLeft: 8 }}>{stats.rejectedRequests}</span>
+          </div>
           <div className="stat-label">Rejected</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-value">
-            💰 {formatCurrency(stats.totalSpent)}
+            <Icon name="download" size={18} />
+            <span style={{ marginLeft: 8 }}>
+              {formatCurrency(stats.totalSpent)}
+            </span>
           </div>
           <div className="stat-label">Total Approved</div>
         </div>
       </div>
 
-      {/* My Recent Requests */}
+      {/* Recent Requests */}
       <div className="card">
         <div className="card-header">
           <h2 className="card-title mb-0">My Recent Requests</h2>
-          <a href="/purchase-requests" className="btn btn-outline btn-sm">
+          <button
+            onClick={handleViewAllRequests}
+            className="btn btn-outline btn-sm"
+          >
             View All
-          </a>
+          </button>
         </div>
 
         {recentRequests.length > 0 ? (
@@ -202,7 +304,7 @@ const DashboardRequester = () => {
                 {recentRequests.map((request) => (
                   <tr key={request._id}>
                     <td>
-                      <strong>{request.title}</strong>
+                      <strong>{request.title || "Untitled Request"}</strong>
                       {request.description && (
                         <div
                           style={{
@@ -222,29 +324,27 @@ const DashboardRequester = () => {
                           request.status
                         )}`}
                       >
-                        {request.status || "draft"}
+                        {getStatusDisplayText(request.status)}
                       </span>
                     </td>
                     <td>{formatDate(request.createdAt)}</td>
                     <td>
-                      {request.status === "draft" && (
-                        <a
-                          href={`/purchase-requests/${request._id}`}
-                          className="btn btn-primary btn-sm"
+                      <div className="d-flex gap-1">
+                        <button
+                          onClick={() => handleViewRequest(request._id)}
+                          className="btn btn-outline btn-sm"
                         >
-                          Submit
-                        </a>
-                      )}
-                      {request.status === "submitted" && (
-                        <span
-                          style={{
-                            color: "var(--text-light)",
-                            fontSize: "0.875rem",
-                          }}
-                        >
-                          Under Review
-                        </span>
-                      )}
+                          View
+                        </button>
+                        {request.status === "draft" && (
+                          <button
+                            onClick={() => handleSubmitRequest(request._id)}
+                            className="btn btn-primary btn-sm"
+                          >
+                            Submit
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -257,73 +357,58 @@ const DashboardRequester = () => {
               <div className="empty-state-icon">📋</div>
               <h3>No Purchase Requests</h3>
               <p>You haven't created any purchase requests yet.</p>
-              <a
-                href="/create-purchase-request"
+              <button
+                onClick={handleCreateRequest}
                 className="btn btn-primary mt-2"
               >
-                Create Your First Request
-              </a>
+                ➕ Create Your First Request
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Quick Actions for Requester */}
+      {/* Quick Actions */}
       <div className="card mt-3">
         <div className="card-header">
           <h3 className="card-title mb-0">Quick Actions</h3>
         </div>
         <div className="p-3">
           <div className="d-flex gap-2 flex-wrap">
-            <a href="/create-purchase-request" className="btn btn-primary">
+            <button onClick={handleCreateRequest} className="btn btn-primary">
               📝 Create New Request
-            </a>
-            <a href="/purchase-requests" className="btn btn-outline">
+            </button>
+            <button onClick={handleViewAllRequests} className="btn btn-outline">
               📋 View My Requests
-            </a>
-            <a href="/suppliers" className="btn btn-outline">
-              🏢 View Suppliers
-            </a>
+            </button>
+            
           </div>
         </div>
       </div>
 
-      {/* Request Tips */}
+      {/* Debug Info - Remove in production */}
       <div className="card mt-3">
         <div className="card-header">
-          <h3 className="card-title mb-0">📝 Request Tips</h3>
+          <h3 className="card-title mb-0">🛠️ Debug Information</h3>
         </div>
         <div className="p-3">
-          <div className="grid grid-2">
-            <div>
-              <h4>✅ Best Practices</h4>
-              <ul
-                style={{
-                  paddingLeft: "1.5rem",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <li>Provide detailed descriptions</li>
-                <li>Include specific quantities</li>
-                <li>Add vendor recommendations</li>
-                <li>Set realistic urgency levels</li>
-              </ul>
-            </div>
-            <div>
-              <h4>🚀 Quick Approval</h4>
-              <ul
-                style={{
-                  paddingLeft: "1.5rem",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <li>Clear budget justification</li>
-                <li>Proper category selection</li>
-                <li>Accurate cost estimates</li>
-                <li>Business need explanation</li>
-              </ul>
-            </div>
+          <div style={{ fontSize: "0.875rem" }}>
+            <strong>User Info:</strong>
+            <br />
+            ID: {user?._id}
+            <br />
+            Name: {user?.name}
+            <br />
+            Role: {user?.role}
+            <br />
+            Department: {user?.department}
           </div>
+          <button
+            onClick={handleCreateRequest}
+            className="btn btn-outline btn-sm mt-2"
+          >
+            Test Create Navigation
+          </button>
         </div>
       </div>
     </div>

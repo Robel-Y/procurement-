@@ -6,6 +6,7 @@ const {
   getRequest,
   approveRequest,
   updateRequest,
+  getPublicCategories
 } = require("../controllers/purchaseRequestController");
 const { protect, authorize } = require("../middleware/auth");
 const { isRequester, canApprove } = require("../middleware/roleCheck");
@@ -18,5 +19,7 @@ router.get("/:id", protect, getRequest);
 router.put("/:id/submit", protect, isRequester, submitRequest);
 router.put("/:id/approve", protect, canApprove, approveRequest);
 router.put("/:id", protect, isRequester, updateRequest);
+router.get("/public", getPublicCategories);
+
 
 module.exports = router;
