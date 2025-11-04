@@ -1,7 +1,7 @@
 # Online Procurement and Supply Management System
 
 An **Online Procurement and Supply Management System** designed to automate and streamline the procurement process for organizations. This system handles purchase requests, supplier management, approvals, inventory tracking, and reporting while providing role-based access for users.
-
+```
 ## 📋 Table of Contents
 - [Features](#features)
 - [User Roles](#user-roles)
@@ -13,7 +13,7 @@ An **Online Procurement and Supply Management System** designed to automate and 
 - [Security](#security--compliance)
 - [Contributing](#contributing)
 - [License](#license)
-
+```
 ## ✨ Features
 - **Purchase Request Management**: Create, approve, reject, and track requests
 - **Supplier Management**: Register, manage, and evaluate suppliers
