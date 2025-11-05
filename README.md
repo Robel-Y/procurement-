@@ -32,10 +32,4 @@ An **Online Procurement and Supply Management System** designed to automate and 
 - **File Uploads**: Multer for document handling
 - **Notifications**: Email via Nodemailer
 
-## ⚙️ Setup & Installation
 
-### Backend Setup
-```bash
-git clone https://github.com/Robel-Y/procurement-.git
-cd procurement-/organization/backend
-npm install
