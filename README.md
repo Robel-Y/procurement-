@@ -865,8 +865,6 @@ Types: Add, Update, Fix, Remove, Refactor, Docs, Test, Style
 This project is licensed under the ISC License - see the LICENSE file for details.
 
 ## 👨‍💻 Authors & Maintainers
-
-- **Khalid** - Original Author
 - **Contributors** - See [Contributors](https://github.com/Robel-Y/procurement-/graphs/contributors)
 
 ## 📞 Contact & Support
